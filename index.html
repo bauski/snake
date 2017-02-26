@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>
+            bau.kim::snake
+        </title>
+        <style type="text/css">
+            body {
+                margin: 0 15px;
+                font: normal 15px/30px arial;
+            }
+            .container {
+                width: 100%;
+            }
+            h1 {
+                font-weight: normal;
+            }
+            button {
+                display: block;
+                width: 80px;
+                margin: 15px 0;
+                background: #fff;
+                border: 1px #ccc solid;
+                padding: 5px 15px;
+                color: #999;
+                cursor: pointer;
+                transition: all 0.5s ease-in-out;
+            }
+            button:hover {
+                border-color: #888;
+                color: #fff;
+                background: #888;
+            }
+
+            @media(min-width: 700px) {
+                .container {
+                    width: 700px;
+                    margin: 30px auto;
+                }
+            }
+        </style>
+        <script type="text/javascript">
+            
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <div id="menu">
+                <h1>
+                    snake
+                </h1>
+                <button id="start">
+                    Start
+                </button>
+                <button id="settings">
+                    Setting
+                </button>
+                <button id="quit">
+                    Quit
+                </button>
+            </div>
+            <div id="game">
+                <div id="fruit">
+                </div>
+                <div id="snake">
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
