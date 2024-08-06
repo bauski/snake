@@ -2,6 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>
             bau.kim::snake
         </title>
@@ -11,7 +12,9 @@
                 font: normal 15px/30px arial;
             }
             .container {
-                width: 100%;
+                width: 600px;
+                margin: 30px auto;
+                text-align: center;
             }
             h1 {
                 font-weight: normal;
@@ -19,7 +22,7 @@
             button {
                 display: block;
                 width: 80px;
-                margin: 15px 0;
+                margin: 15px auto;
                 background: #fff;
                 border: 1px #ccc solid;
                 padding: 5px 15px;
@@ -32,17 +35,49 @@
                 color: #fff;
                 background: #888;
             }
+            #game {
+                display: none;
+                position: relative;
+                border: 1px solid #ccc;
+                box-sizing: border-box;
+            }
+            #game * {
+                position: absolute;
+                box-sizing: border-box;
+            }
 
-            @media(min-width: 700px) {
-                .container {
-                    width: 700px;
-                    margin: 30px auto;
+            #game .cell {
+                border: 1px solid #ccc;
+            }
+
+            #snake {
+                position: absolute;
+                background: #333;
+                border: 1px solid #fff;
+            }
+
+            #food, .tail {
+                position: absolute;
+                border: 1px solid #fff;
+                animation: pulse 1s infinite;
+            }
+            @keyframes pulse {
+                0%, 100% {
+                    background-color: #f56a3f;
+                    transform: scale(1)
+                }
+                25% {
+                    background-color: #00ff00;
+                }
+                50% {
+                    background-color: #9e42b0;
+                    transform: scale(1.3)
+                }
+                75% {
+                    background-color: #3366ff;
                 }
             }
         </style>
-        <script type="text/javascript">
-            
-        </script>
     </head>
     <body>
         <div class="container">
@@ -53,19 +88,234 @@
                 <button id="start">
                     Start
                 </button>
-                <button id="settings">
-                    Setting
-                </button>
-                <button id="quit">
-                    Quit
-                </button>
             </div>
             <div id="game">
-                <div id="fruit">
-                </div>
                 <div id="snake">
+                </div>
+                <div id="food">
                 </div>
             </div>
         </div>
+        <script type="text/javascript">
+            var snakeGame = {
+                gameSize: 600,
+                cellSize: 20,
+                direction: "up",
+                snakeSpeed: 5,
+                snakeTail: [],
+                gameSpeed: 300
+            }
+            
+            function init() {
+                snakeGame.startElement = document.querySelector("#start")
+                snakeGame.menuElement = document.querySelector("#menu")
+                snakeGame.gameElement = document.querySelector("#game")
+                snakeGame.snakeElement = document.querySelector("#snake")
+                snakeGame.foodElement = document.querySelector("#food")
+
+                snakeGame.gameElement.style.width = snakeGame.gameSize + "px"
+                snakeGame.gameElement.style.height = snakeGame.gameSize + "px"
+                snakeGame.snakeElement.style.width = snakeGame.cellSize + "px"
+                snakeGame.snakeElement.style.height = snakeGame.cellSize + "px"
+                snakeGame.foodElement.style.width = snakeGame.cellSize + "px"
+                snakeGame.foodElement.style.height = snakeGame.cellSize + "px"
+
+                snakeGame.dimension = snakeGame.gameSize / snakeGame.cellSize
+
+                for (let i = 0; i < snakeGame.dimension; i++) {
+                    for (let j = 0; j < snakeGame.dimension; j++) {
+                        let cell = document.createElement("div")
+                        cell.style.width = snakeGame.cellSize + "px"
+                        cell.style.height = snakeGame.cellSize + "px"
+                        cell.style.top = i * snakeGame.cellSize + "px"
+                        cell.style.left = j * snakeGame.cellSize + "px"
+                        cell.classList.add('cell')
+                        snakeGame.gameElement.append(cell)
+                    }
+                }
+
+                snakeGame.startElement.addEventListener('click', () => {
+                    startGame()
+                })
+            }
+
+            function startGame() {
+                snakeGame.menuElement.style.display = "none"
+                snakeGame.gameElement.style.display = "block"
+                snakeGame.snakeElement.style.display = "block"
+                snakeGame.foodElement.style.display = "block"
+                document.addEventListener('keydown', setDirection, false)
+                makeFood()
+                snakeGame.snakeElement.style.top = (snakeGame.gameSize / 2) + "px"
+                snakeGame.snakeElement.style.left = (snakeGame.gameSize / 2) + "px"
+                snakeGame.gameSpeed = 300
+                for (tail of snakeGame.snakeTail) {
+                    snakeGame.gameElement.removeChild(tail)
+                }
+                snakeGame.snakeTail = []
+                snakeGame.gameThread = setInterval(runGame, snakeGame.gameSpeed)
+            }
+
+            function setDirection(e) {
+                switch (e.key) {
+                    case "ArrowUp":
+                        snakeGame.direction = "up"
+                        break
+                    case "ArrowDown":
+                        snakeGame.direction = "down"
+                        break
+                    case "ArrowLeft":
+                        snakeGame.direction = "left"
+                        break
+                    case "ArrowRight":
+                        snakeGame.direction = "right"
+                        break
+                }
+            }
+
+            function runGame() {
+                if (isGameOver()) {
+                    endGame()
+                } else {
+                    if(isHeadOnFood()) {
+                        eatFood()
+                        grow()
+                    }
+                    moveSnake()
+                    displayBoard()
+                }
+            }
+
+            function moveSnake() {
+                let previousStep = {
+                    'top': snakeGame.snakeElement.style.top,
+                    'left': snakeGame.snakeElement.style.left
+                }
+                switch (snakeGame.direction) {
+                    case "up":
+                        snakeGame.snakeElement.style.top = (parseInt(snakeGame.snakeElement.style.top) - snakeGame.cellSize) + "px";
+                        break
+                    case "down":
+                        snakeGame.snakeElement.style.top = (parseInt(snakeGame.snakeElement.style.top) + snakeGame.cellSize) + "px";
+                        break
+                    case "left":
+                        snakeGame.snakeElement.style.left = (parseInt(snakeGame.snakeElement.style.left) - snakeGame.cellSize) + "px";
+                        break
+                    case "right":
+                        snakeGame.snakeElement.style.left = (parseInt(snakeGame.snakeElement.style.left) + snakeGame.cellSize) + "px";
+                        break
+                }
+                tailFollow(previousStep)
+            }
+
+            function tailFollow(previousStep) {
+                let temp = {}
+                for (tail of snakeGame.snakeTail) {
+                    temp.top = tail.style.top
+                    temp.left = tail.style.left
+                    tail.style.top = previousStep.top
+                    tail.style.left = previousStep.left
+                    
+                    previousStep.top = temp.top
+                    previousStep.left = temp.left
+                }
+            }
+
+            function displayBoard() {
+
+            }
+
+            function isHeadOnFood() {
+                if (snakeGame.snakeElement.style.top == snakeGame.foodElement.style.top) {
+                    if(snakeGame.snakeElement.style.left == snakeGame.foodElement.style.left) {
+                        return true;
+                    } else {
+                        return false
+                    }
+                } else {
+                    return false
+                }
+            }
+
+            function eatFood() {
+
+                makeFood()
+            }
+
+            function makeFood() {
+                snakeGame.foodElement.style.top = (Math.floor(snakeGame.dimension * Math.random()) * snakeGame.cellSize) + "px"
+                snakeGame.foodElement.style.left = (Math.floor(snakeGame.dimension * Math.random()) * snakeGame.cellSize) + "px"
+            }
+
+            function grow() {
+                tailElement = document.createElement('div')
+                tailElement.classList.add('tail')
+                let tailIndex = snakeGame.snakeTail.length
+                tailElement.id = 'tail-' + tailIndex
+                tailElement.dataset.tailIndex = tailIndex
+                tailElement.style.top = snakeGame.snakeElement.style.top + 'px'
+                tailElement.style.left = snakeGame.snakeElement.style.left + 'px'
+                tailElement.style.width = snakeGame.cellSize + "px"
+                tailElement.style.height = snakeGame.cellSize + "px"
+                tailElement.style.opacity = 1 - parseFloat("0." + tailIndex)
+                snakeGame.gameElement.appendChild(tailElement)
+                snakeGame.snakeTail.push(tailElement)
+                snakeGame.gameSpeed -= 10;
+                clearInterval(snakeGame.gameThread)
+                snakeGame.gameThread = setInterval(runGame, snakeGame.gameSpeed)
+            }
+
+            function isGameOver() {
+                if (isOutOfBounds()) {
+                    return true
+                }
+                if (isHeadOnTail()) {
+                    return true
+                }
+                return false
+            }
+
+            function isOutOfBounds() {
+                if (parseInt(snakeGame.snakeElement.style.top) < 0) {
+                    return true
+                }
+                if (parseInt(snakeGame.snakeElement.style.left) < 0) {
+                    return true
+                }
+                if (parseInt(snakeGame.snakeElement.style.top) + snakeGame.cellSize > snakeGame.gameSize) {
+                    return true
+                }
+                if (parseInt(snakeGame.snakeElement.style.left) + snakeGame.cellSize > snakeGame.gameSize) {
+                    return true
+                }
+                return false
+            }
+            function isHeadOnTail() {
+                let onHead = false
+                for (tail of snakeGame.snakeTail) {
+                    if (snakeGame.snakeElement.style.top == tail.style.top) {
+                        if (snakeGame.snakeElement.style.left == tail.style.left) {
+                            onHead = true
+                        } 
+                    }
+                }
+                return onHead
+            }
+
+            function endGame() {
+                document.removeEventListener('keydown', setDirection, false)
+                clearInterval(snakeGame.gameThread)
+                snakeGame.gameElement.style.display = 'none'
+                snakeGame.menuElement.style.display = "block"
+                snakeGame.snakeElement.style.display = "none"
+                snakeGame.foodElement.style.display = "none"
+            }
+
+            function falseFunction() {
+                return false;
+            }
+
+            window.onload = init
+        </script>
     </body>
 </html>
